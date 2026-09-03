@@ -1,65 +1,69 @@
-#!/usr/bin/env python3
-
 class CashRegister:
-  pass
-
-class CashRegister:
-    """A simple cash register that can add items, apply a discount,
-    and void the most recent transaction."""
+    """Models a cash register: add items, apply a discount, void the
+    last sale, and report back what's been rung up."""
 
     def __init__(self, discount=0):
-        # discount goes through the @discount.setter below, so it gets
-        # validated even when it's set for the first time here.
+        # "takes one optional argument, a discount, on initialization"
         self.discount = discount
 
-        self.total = 0                  # running total price of everything in the register
-        self.items = []                 # flat list of item names currently "in" the register
-        self.previous_transactions = [] # history of add_item() calls, used for undo
+        # "sets an instance variable total to zero on initialization"
+        self.total = 0
 
-    @property
-    def discount(self):
-        # Getter just hands back the stored value.
-        return self._discount
+        # "sets an instance variable items to empty list on initialization"
+        self.items = []
 
-    @discount.setter
-    def discount(self, value):
-        # A property lets us run validation every time someone does
-        # register.discount = something, instead of trusting the caller.
-        if isinstance(value, int) and 0 <= value <= 100:
-            self._discount = value
-        else:
-            print("Not valid discount")
+        # keeps the full history of sales, so we can undo them and
+        # rebuild an "including multiples" list later on
+        self.previous_transactions = []
 
-    def add_item(self, item, price, quantity):
-        # Total cost of this line = unit price * how many they're buying.
-        line_total = price * quantity
-        self.total += line_total
+    def add_item(self, title, price, quantity=1):
+        # "accepts a title and a price and increases the total"
+        # "also accepts an optional quantity"  -> defaults to 1 above
+        # "doesn't forget about the previous total" -> we save it before changing it
+        previous_total = self.total
+        self.total += price * quantity
 
-        # Track the item itself so self.items mirrors what's in the register.
-        self.items.append(item)
+        # one entry per sale, NOT multiplied out
+        self.items.append(title)
 
-        # Save everything needed to reverse this exact action later.
+        # everything needed to undo this exact sale later
         self.previous_transactions.append({
-            "item": item,
+            "title": title,
             "price": price,
             "quantity": quantity,
+            "previous_total": previous_total,
         })
 
     def apply_discount(self):
-        # discount is stored as a whole-number percent (e.g. 20 == 20%),
-        # so divide by 100 to turn it into a fraction before applying it.
+        # "applies the discount to the total price"
+        # "prints success message with updated total"
         self.total -= self.total * (self.discount / 100)
+        print(f"Discount applied. New total: {self.total}")
 
     def void_last_transaction(self):
+        # "prints a string error message that there is no discount to apply"
         if not self.previous_transactions:
-            print("There is no transaction to voidnp.")
+            print("There is no discount to apply.")
             return
 
-        # Pull the most recent transaction back off the history...
+        # "subtracts the last item from the total"  -> "reduces the total"
         last_transaction = self.previous_transactions.pop()
-
-        # ...undo its effect on the total...
+        self.items.pop()
         self.total -= last_transaction["price"] * last_transaction["quantity"]
 
-        # ...and remove the matching item so self.items stays in sync.
-        self.items.remove(last_transaction["item"])
+        # "returns the total to 0.0 if all items have been removed"
+        if not self.items:
+            self.total = 0.0
+
+    def get_items(self):
+        # "returns an array containing all items that have been added"
+        return self.items
+
+    def get_items_with_multiples(self):
+        # "returns an array containing all items that have been added,
+        # including multiples" -> e.g. quantity=3 apples becomes
+        # ['apple', 'apple', 'apple']
+        expanded = []
+        for transaction in self.previous_transactions:
+            expanded.extend([transaction["title"]] * transaction["quantity"])
+        return expanded
