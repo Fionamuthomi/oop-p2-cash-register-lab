@@ -1,69 +1,62 @@
+#!/usr/bin/env python3
+
 class CashRegister:
-    """Models a cash register: add items, apply a discount, void the
-    last sale, and report back what's been rung up."""
+    """Models a simple cash register: add items, apply a discount,
+    and void the last sale."""
 
     def __init__(self, discount=0):
-        # "takes one optional argument, a discount, on initialization"
-        self.discount = discount
+        self.discount = discount        # goes through the property setter below
+        self.total = 0                  # running total
+        self.items = []                 # every item title, repeated per quantity
+        self.previous_transactions = [] # history, used to undo the last add_item()
 
-        # "sets an instance variable total to zero on initialization"
-        self.total = 0
+    @property
+    def discount(self):
+        return self._discount
 
-        # "sets an instance variable items to empty list on initialization"
-        self.items = []
-
-        # keeps the full history of sales, so we can undo them and
-        # rebuild an "including multiples" list later on
-        self.previous_transactions = []
+    @discount.setter
+    def discount(self, value):
+        # "Ensure discount is an integer. Ensure it's between 0-100 inclusive.
+        # If not, print 'Not valid discount'."
+        if isinstance(value, int) and 0 <= value <= 100:
+            self._discount = value
+        else:
+            print("Not valid discount")
 
     def add_item(self, title, price, quantity=1):
-        # "accepts a title and a price and increases the total"
-        # "also accepts an optional quantity"  -> defaults to 1 above
-        # "doesn't forget about the previous total" -> we save it before changing it
-        previous_total = self.total
         self.total += price * quantity
 
-        # one entry per sale, NOT multiplied out
-        self.items.append(title)
+        # append the title once for EACH unit bought, so self.items
+        # reflects quantities too (e.g. 2 eggs -> ["eggs", "eggs"])
+        for _ in range(quantity):
+            self.items.append(title)
 
-        # everything needed to undo this exact sale later
         self.previous_transactions.append({
             "title": title,
             "price": price,
             "quantity": quantity,
-            "previous_total": previous_total,
         })
 
     def apply_discount(self):
-        # "applies the discount to the total price"
-        # "prints success message with updated total"
-        self.total -= self.total * (self.discount / 100)
-        print(f"Discount applied. New total: {self.total}")
+        if self.discount == 0:
+            print("There is no discount to apply.")
+        else:
+            # int() keeps the total a whole number when the inputs are
+            # whole numbers, so the printed total is $800, not $800.0
+            discount_amount = int(0.01 * self.discount * self.total)
+            self.total -= discount_amount
+            print(f"After the discount, the total comes to ${self.total}.")
 
     def void_last_transaction(self):
-        # "prints a string error message that there is no discount to apply"
+        # "If no transactions are in the array, print
+        # 'There is no transaction to void.'"
         if not self.previous_transactions:
-            print("There is no discount to apply.")
+            print("There is no transaction to void.")
             return
 
-        # "subtracts the last item from the total"  -> "reduces the total"
         last_transaction = self.previous_transactions.pop()
-        self.items.pop()
         self.total -= last_transaction["price"] * last_transaction["quantity"]
 
-        # "returns the total to 0.0 if all items have been removed"
-        if not self.items:
-            self.total = 0.0
-
-    def get_items(self):
-        # "returns an array containing all items that have been added"
-        return self.items
-
-    def get_items_with_multiples(self):
-        # "returns an array containing all items that have been added,
-        # including multiples" -> e.g. quantity=3 apples becomes
-        # ['apple', 'apple', 'apple']
-        expanded = []
-        for transaction in self.previous_transactions:
-            expanded.extend([transaction["title"]] * transaction["quantity"])
-        return expanded
+        # remove as many copies of that title as were added
+        for _ in range(last_transaction["quantity"]):
+            self.items.pop()

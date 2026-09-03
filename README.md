@@ -38,3 +38,4 @@ register.apply_discount()          # 20% off the current total
 
 register.void_last_transaction()   # undoes the last add_item()
 ```
+
